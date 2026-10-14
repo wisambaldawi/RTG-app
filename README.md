@@ -1,4 +1,4 @@
-# IT-Lager (RTG-app)
+# Lager saldo (RTG-app)
 
 Ett internt webbverktyg som jag har byggt för min arbetsplats för att hålla koll på lagersaldot av kalibrerade TV-apparater och datorer. 
 
