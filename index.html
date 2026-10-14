@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lagersaldo: Kalibrerat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: { 
+                        brand: { 50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 900: '#1e3a8a' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .toast-enter { transform: translateY(100%); opacity: 0; }
+        .toast-enter-active { transform: translateY(0); opacity: 1; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .toast-leave { transform: translateY(0); opacity: 1; }
+        .toast-leave-active { transform: translateY(100%); opacity: 0; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col">
+    
+    
+    <header class="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-10">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="bg-brand-600 p-2 rounded-lg shadow-sm">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path></svg>
+                </div>
+                <h1 class="text-xl font-bold text-slate-900 tracking-tight">RTG Lager</h1>
+            </div>
+            <div class="flex items-center">
+                <span class="bg-brand-50 text-brand-700 border border-brand-200 px-4 py-1.5 rounded-full text-sm font-semibold shadow-sm flex items-center gap-2" id="totalCount">
+                    <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    Laddar...
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-5xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        
+        
+        <section class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8">
+            <h2 class="text-lg font-bold text-slate-900 mb-5 flex items-center gap-2">
+                <svg class="w-5 h-5 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                Registrera färdig enhet
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
+                <div class="md:col-span-3">
+                    <label class="block text-sm font-semibold text-slate-600 mb-1.5">Kategori</label>
+                    <select id="category" class="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 block p-3 transition-colors outline-none cursor-pointer">
+                        <option value="TV">TV-skärm</option>
+                        <option value="Dator">Dator / Laptop</option>
+                    </select>
+                </div>
+                <div class="md:col-span-5">
+                    <label class="block text-sm font-semibold text-slate-600 mb-1.5">Produktnamn</label>
+                    <input type="text" id="name" placeholder="T.ex. HP EliteBook 840" class="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 block p-3 transition-colors outline-none">
+                </div>
+                <div class="md:col-span-4">
+                    <label class="block text-sm font-semibold text-slate-600 mb-1.5">Varukod (SKU)</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="sku" placeholder="Skanna/Skriv..." class="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 block p-3 transition-colors outline-none">
+                        <button onclick="saveProduct()" class="bg-brand-600 text-white px-6 py-3 rounded-xl hover:bg-brand-700 focus:ring-4 focus:ring-brand-200 font-bold transition-all shadow-sm whitespace-nowrap">
+                            Spara
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        
+        <section>
+            <div class="relative mb-6 group">
+                <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+                    <svg class="w-6 h-6 text-slate-400 group-focus-within:text-brand-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </div>
+                <input type="text" id="search" placeholder="Sök i lagret efter modell eller varukod..." onkeyup="filterList()" class="w-full bg-white border border-slate-200 text-slate-900 text-lg rounded-2xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 block pl-12 p-4 shadow-sm transition-all outline-none">
+            </div>
+
+            <ul id="productList" class="space-y-3">
+                <li class="text-center text-slate-500 py-16 bg-white rounded-2xl border border-slate-200 border-dashed">
+                    <svg class="w-8 h-8 text-slate-300 mx-auto mb-3 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path></svg>
+                    <p class="text-lg font-medium">Ansluter till databasen...</p>
+                </li>
+            </ul>
+        </section>
+    </main>
+
+    
+    <div id="toast" class="fixed bottom-6 right-6 bg-slate-900 text-white px-6 py-4 rounded-2xl shadow-2xl toast-enter flex items-center gap-3 hidden z-50 border border-slate-700">
+        <svg class="w-6 h-6 text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <span id="toast-message" class="font-medium"></span>
+    </div>
+
+<script>
+       
+        const SUPABASE_URL = 'https://unaemrtkytiqsoisfjrz.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_EoQIJDm5da5Deihj-dD-xg_SjTYmsto';
+
+        
+        const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        let products = [];
+
+        
+        async function fetchProducts() {
+            const { data, error } = await db
+                .from('products')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error("Fel vid hämtning:", error);
+                document.getElementById('productList').innerHTML = '<li class="text-center text-rose-500 py-8">Kunde inte hämta data.</li>';
+            } else {
+                products = data;
+                renderList(products);
+                updateCount();
+            }
+        }
+
+        async function saveProduct() {
+            const category = document.getElementById('category').value;
+            const name = document.getElementById('name').value.trim();
+            const sku = document.getElementById('sku').value.trim();
+
+            if(!name || !sku) {
+                showToast("Fyll i både namn och varukod!", true);
+                return;
+            }
+
+            const { error } = await db.from('products').insert([{ category, name, sku }]);
+
+            if (error) {
+                if(error.code === '23505') {
+                    showToast("Varukoden finns redan!", true);
+                } else {
+                    showToast("Ett fel uppstod.", true);
+                }
+            } else {
+                document.getElementById('name').value = '';
+                document.getElementById('sku').value = '';
+                showToast(`Lade till ${category}: ${name}`);
+                fetchProducts();
+            }
+        }
+
+        async function deleteProduct(id, name) {
+            const { error } = await db.from('products').delete().eq('id', id);
+
+            if (error) {
+                showToast("Kunde inte ta bort varan.", true);
+            } else {
+                showToast(`Såld och utplockad: ${name}`);
+                fetchProducts();
+                document.getElementById('search').value = '';
+            }
+        }
+
+       
+
+        function renderList(listToRender) {
+            const ul = document.getElementById('productList');
+            ul.innerHTML = '';
+            
+            if(listToRender.length === 0) {
+                ul.innerHTML = '<li class="text-center text-slate-500 py-16 bg-white border border-slate-200 border-dashed rounded-2xl shadow-sm">Inga enheter hittades. Lagret är tomt.</li>';
+                return;
+            }
+
+            listToRender.forEach(item => {
+                ul.innerHTML += `
+                    <li class="group flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-5 md:px-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-brand-300 transition-all gap-5 relative overflow-hidden">
+                        <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-brand-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        <div class="flex-1 pl-2">
+                            <div class="flex items-center gap-2 mb-1.5">
+                                <span class="text-[11px] font-extrabold text-brand-700 bg-brand-50 border border-brand-100 px-2.5 py-0.5 rounded-full uppercase tracking-wider">${item.category}</span>
+                            </div>
+                            <p class="font-bold text-xl text-slate-900 leading-tight">${item.name}</p>
+                            <p class="text-sm text-slate-500 mt-2 flex items-center gap-1.5">
+                                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path></svg>
+                                Varukod: <span class="font-mono text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">${item.sku}</span>
+                            </p>
+                        </div>
+                        <button onclick="deleteProduct(${item.id}, '${item.name}')" class="w-full sm:w-auto bg-white text-rose-600 border-2 border-rose-100 font-bold px-6 py-3 rounded-xl hover:bg-rose-50 hover:border-rose-300 active:bg-rose-100 transition-all shadow-sm flex items-center justify-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            Plocka ut
+                        </button>
+                    </li>
+                `;
+            });
+        }
+
+        function filterList() {
+            const query = document.getElementById('search').value.toLowerCase();
+            const filtered = products.filter(p => 
+                p.name.toLowerCase().includes(query) || 
+                p.sku.toLowerCase().includes(query)
+            );
+            renderList(filtered);
+        }
+
+        function updateCount() {
+            document.getElementById('totalCount').innerHTML = `Totalt i lager: <span class="font-bold ml-1">${products.length} st</span>`;
+        }
+
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            const msgEl = document.getElementById('toast-message');
+            const icon = toast.querySelector('svg');
+            
+            msgEl.innerText = message;
+            
+            if(isError) {
+                toast.classList.replace('bg-slate-900', 'bg-rose-600');
+                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>';
+                icon.classList.replace('text-emerald-400', 'text-white');
+            } else {
+                toast.classList.replace('bg-rose-600', 'bg-slate-900');
+                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>';
+                icon.classList.replace('text-white', 'text-emerald-400');
+            }
+
+            toast.classList.remove('hidden');
+            toast.classList.add('toast-enter-active');
+            
+            setTimeout(() => {
+                toast.classList.replace('toast-enter-active', 'toast-leave-active');
+                setTimeout(() => {
+                    toast.classList.add('hidden');
+                    toast.classList.remove('toast-leave-active');
+                }, 300);
+            }, 3000);
+        }
+
+        
+        db
+          .channel('public:products')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, payload => {
+              fetchProducts(); 
+          })
+          .subscribe()
+
+        fetchProducts();
+    </script>
+</body>
+</html>
