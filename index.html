@@ -28,7 +28,6 @@
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col">
     
-    
     <header class="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-10">
         <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
             <div class="flex items-center gap-3">
@@ -48,29 +47,32 @@
 
     <main class="flex-grow max-w-5xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         
-        
         <section class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8">
             <h2 class="text-lg font-bold text-slate-900 mb-5 flex items-center gap-2">
                 <svg class="w-5 h-5 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                 Registrera färdig enhet
             </h2>
             <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
-                <div class="md:col-span-3">
+                <div class="md:col-span-2">
                     <label class="block text-sm font-semibold text-slate-600 mb-1.5">Kategori</label>
                     <select id="category" class="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 block p-3 transition-colors outline-none cursor-pointer">
                         <option value="TV">TV-skärm</option>
                         <option value="Dator">Dator / Laptop</option>
                     </select>
                 </div>
-                <div class="md:col-span-5">
+                <div class="md:col-span-4">
                     <label class="block text-sm font-semibold text-slate-600 mb-1.5">Produktnamn</label>
                     <input type="text" id="name" placeholder="T.ex. HP EliteBook 840" class="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 block p-3 transition-colors outline-none">
                 </div>
-                <div class="md:col-span-4">
+                <div class="md:col-span-3">
                     <label class="block text-sm font-semibold text-slate-600 mb-1.5">Varukod (SKU)</label>
+                    <input type="text" id="sku" placeholder="Skanna/Skriv..." class="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 block p-3 transition-colors outline-none">
+                </div>
+                <div class="md:col-span-3">
+                    <label class="block text-sm font-semibold text-slate-600 mb-1.5">Antal</label>
                     <div class="flex gap-2">
-                        <input type="text" id="sku" placeholder="Skanna/Skriv..." class="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 block p-3 transition-colors outline-none">
-                        <button onclick="saveProduct()" class="bg-brand-600 text-white px-6 py-3 rounded-xl hover:bg-brand-700 focus:ring-4 focus:ring-brand-200 font-bold transition-all shadow-sm whitespace-nowrap">
+                        <input type="number" id="amount" value="1" min="1" class="w-20 bg-slate-50 border border-slate-200 text-slate-900 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 block p-3 transition-colors outline-none text-center">
+                        <button onclick="saveProduct()" class="w-full bg-brand-600 text-white px-4 py-3 rounded-xl hover:bg-brand-700 focus:ring-4 focus:ring-brand-200 font-bold transition-all shadow-sm whitespace-nowrap">
                             Spara
                         </button>
                     </div>
@@ -78,7 +80,6 @@
             </div>
         </section>
 
-        
         <section>
             <div class="relative mb-6 group">
                 <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
@@ -96,22 +97,18 @@
         </section>
     </main>
 
-    
     <div id="toast" class="fixed bottom-6 right-6 bg-slate-900 text-white px-6 py-4 rounded-2xl shadow-2xl toast-enter flex items-center gap-3 hidden z-50 border border-slate-700">
         <svg class="w-6 h-6 text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
         <span id="toast-message" class="font-medium"></span>
     </div>
 
-<script>
-       
+    <script>
         const SUPABASE_URL = 'https://unaemrtkytiqsoisfjrz.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_EoQIJDm5da5Deihj-dD-xg_SjTYmsto';
 
-        
         const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         let products = [];
 
-        
         async function fetchProducts() {
             const { data, error } = await db
                 .from('products')
@@ -132,41 +129,72 @@
             const category = document.getElementById('category').value;
             const name = document.getElementById('name').value.trim();
             const sku = document.getElementById('sku').value.trim();
+            const amountToAdd = parseInt(document.getElementById('amount').value) || 1;
 
             if(!name || !sku) {
                 showToast("Fyll i både namn och varukod!", true);
                 return;
             }
 
-            const { error } = await db.from('products').insert([{ category, name, sku }]);
+            // Kollar om varukoden redan finns i vår lista
+            const existingProduct = products.find(p => p.sku === sku);
 
-            if (error) {
-                if(error.code === '23505') {
-                    showToast("Varukoden finns redan!", true);
+            if (existingProduct) {
+                // Uppdatera: Plussa på antalet
+                const currentAmount = existingProduct.antal || 1;
+                const newAmount = currentAmount + amountToAdd;
+                
+                const { error } = await db.from('products').update({ antal: newAmount }).eq('id', existingProduct.id);
+
+                if (error) {
+                    showToast("Kunde inte uppdatera antalet.", true);
                 } else {
-                    showToast("Ett fel uppstod.", true);
+                    resetForm();
+                    showToast(`Ökade lagersaldot: Nu finns ${newAmount} st ${name}`);
+                    fetchProducts();
                 }
             } else {
-                document.getElementById('name').value = '';
-                document.getElementById('sku').value = '';
-                showToast(`Lade till ${category}: ${name}`);
-                fetchProducts();
+                // Skapa en helt ny rad
+                const { error } = await db.from('products').insert([{ category, name, sku, antal: amountToAdd }]);
+
+                if (error) {
+                    showToast("Ett fel uppstod.", true);
+                } else {
+                    resetForm();
+                    showToast(`Lade till ${amountToAdd} st ${category}: ${name}`);
+                    fetchProducts();
+                }
             }
         }
 
-        async function deleteProduct(id, name) {
-            const { error } = await db.from('products').delete().eq('id', id);
-
-            if (error) {
-                showToast("Kunde inte ta bort varan.", true);
+        async function deleteProduct(id, currentAmount, name) {
+            if (currentAmount > 1) {
+                // Minska antalet med 1
+                const { error } = await db.from('products').update({ antal: currentAmount - 1 }).eq('id', id);
+                if (error) {
+                    showToast("Kunde inte minska lagersaldot.", true);
+                } else {
+                    showToast(`Plockade ut 1 st. ${currentAmount - 1} st kvar av ${name}.`);
+                    fetchProducts();
+                }
             } else {
-                showToast(`Såld och utplockad: ${name}`);
-                fetchProducts();
-                document.getElementById('search').value = '';
+                // Radera helt om det bara var 1 kvar
+                const { error } = await db.from('products').delete().eq('id', id);
+                if (error) {
+                    showToast("Kunde inte ta bort varan.", true);
+                } else {
+                    showToast(`Såld och utplockad: ${name}`);
+                    fetchProducts();
+                    document.getElementById('search').value = '';
+                }
             }
         }
 
-       
+        function resetForm() {
+            document.getElementById('name').value = '';
+            document.getElementById('sku').value = '';
+            document.getElementById('amount').value = '1';
+        }
 
         function renderList(listToRender) {
             const ul = document.getElementById('productList');
@@ -178,12 +206,15 @@
             }
 
             listToRender.forEach(item => {
+                const amount = item.antal || 1; // Sätter standard till 1 om kolumnen är tom för gamla rader
+                
                 ul.innerHTML += `
                     <li class="group flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-5 md:px-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-brand-300 transition-all gap-5 relative overflow-hidden">
                         <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-brand-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                         <div class="flex-1 pl-2">
                             <div class="flex items-center gap-2 mb-1.5">
                                 <span class="text-[11px] font-extrabold text-brand-700 bg-brand-50 border border-brand-100 px-2.5 py-0.5 rounded-full uppercase tracking-wider">${item.category}</span>
+                                <span class="text-[11px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">${amount} st i lager</span>
                             </div>
                             <p class="font-bold text-xl text-slate-900 leading-tight">${item.name}</p>
                             <p class="text-sm text-slate-500 mt-2 flex items-center gap-1.5">
@@ -191,9 +222,9 @@
                                 Varukod: <span class="font-mono text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">${item.sku}</span>
                             </p>
                         </div>
-                        <button onclick="deleteProduct(${item.id}, '${item.name}')" class="w-full sm:w-auto bg-white text-rose-600 border-2 border-rose-100 font-bold px-6 py-3 rounded-xl hover:bg-rose-50 hover:border-rose-300 active:bg-rose-100 transition-all shadow-sm flex items-center justify-center gap-2">
+                        <button onclick="deleteProduct(${item.id}, ${amount}, '${item.name}')" class="w-full sm:w-auto bg-white text-rose-600 border-2 border-rose-100 font-bold px-6 py-3 rounded-xl hover:bg-rose-50 hover:border-rose-300 active:bg-rose-100 transition-all shadow-sm flex items-center justify-center gap-2">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                            Plocka ut
+                            Plocka ut 1 st
                         </button>
                     </li>
                 `;
@@ -210,7 +241,9 @@
         }
 
         function updateCount() {
-            document.getElementById('totalCount').innerHTML = `Totalt i lager: <span class="font-bold ml-1">${products.length} st</span>`;
+            // Räknar ihop det totala värdet av 'antal' för alla produkter
+            const totalItems = products.reduce((sum, p) => sum + (p.antal || 1), 0);
+            document.getElementById('totalCount').innerHTML = `Totalt i lager: <span class="font-bold ml-1">${totalItems} st</span>`;
         }
 
         function showToast(message, isError = false) {
@@ -242,7 +275,6 @@
             }, 3000);
         }
 
-        
         db
           .channel('public:products')
           .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, payload => {
